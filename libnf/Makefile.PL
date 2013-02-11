@@ -18,7 +18,7 @@ WriteMakefile(
 		'../nfdump/bin/ipconv.c', 
 		'../nfdump/bin/flist.c', 
 		],	
-	CCFLAGS => '-DDEFINE_LIBNF=1',
+	CCFLAGS => '-DDEFINE_LIBNF=1 -DNSEL=1',
 	clean => { 'FILES' => '*$(LIB_EXT) *$(OBJ_EXT) $(O_FILES)' },
 );
 #libnf$(LIB_EXT): nfdump $(O_FILES) libnf.h libnf.c bit_array.h 
@@ -34,6 +34,7 @@ libnf$(LIB_EXT): $(O_FILES) libnf.c libnf.h bit_array.h
 		$(CP) *.o ../nfdump/bin/
 		./check_items_map.pl 
 		./h2pod.pl < libnf.h > libnf.h.pod
+		./h2fields.pl < libnf.h > ../lib/Net/NfDump/Fields.pm 
 		$(CP) ../lib/Net/NfDump.pm ../lib/Net/NfDump.pm.bkp
 		cat ../lib/Net/NfDump.pm.bkp libnf.h.pod | ./mergechapter.pl > ../lib/Net/NfDump.pm
 		$(AR) cr libnf$(LIB_EXT) $(O_FILES) *$(OBJ_EXT) ../nfdump/bin/*$(OBJ_EXT)

@@ -9,6 +9,7 @@ require Exporter;
 use AutoLoader;
 use Socket qw( AF_INET );
 use Socket6 qw( inet_ntop inet_pton AF_INET6 );
+use Net::NfDump::Fields;
 
 our @ISA = qw(Exporter);
 
@@ -32,7 +33,7 @@ our @EXPORT = qw(
 	
 );
 
-our $VERSION = '0.01_06';
+our $VERSION = '0.02_01';
 
 sub AUTOLOAD {
     # This AUTOLOAD is used to 'autoload' constants from the constant()
@@ -101,10 +102,46 @@ sub merge_opts {
 }
 
 
+# Internal function to set output items/fields. At the input takes array that 
+# represents string names of the files 
+sub set_fields {
+	my ($self, @fields) = @_;
+
+	$self->{fields_num} = [];
+	$self->{fields_txt} = [];
+
+	foreach (@fields) {
+
+		my $fld = lc($_);
+
+		# add all fields
+		if ($fld eq '*') {
+			push(@{$self->{fields_num}}, values %Net::NfDump::Fields::NFL_FIELDS_TXT );
+			push(@{$self->{fields_txt}}, keys %Net::NfDump::Fields::NFL_FIELDS_TXT );
+		# regular item 
+		} else {
+
+			if ( !defined($Net::NfDump::Fields::NFL_FIELDS_TXT{$fld}) ) {
+				croak("Unknown field \"%s\".", $_); 
+			}
+
+			push(@{$self->{fields_num}}, $Net::NfDump::Fields::NFL_FIELDS_TXT{$fld});
+			push(@{$self->{fields_txt}}, $fld);;
+		}
+	}
+
+	$self->{opts}->{Fields} = $self->{fields_txt};
+
+	return Net::NfDump::libnf_set_fields($self->{handle}, $self->{fields_num});
+}
+
+
 =head2 new
 
 The constructor. As the parameter options can be specified. This options will be used
 as a default option set in the particular methods. 
+
+Note about Fields;
 
 =cut
 
@@ -122,7 +159,8 @@ sub new {
 
 	$class->{opts} = { 
 		InputFiles => [],
-		Filter => "any",
+		Filter => 'any',
+		Fields => [ '*' ],
 		TimeWindowStart => 0,
 		TimeWindowEnd => 0,
 		OutputFile => undef,
@@ -179,7 +217,6 @@ sub info {
 	
 }
 
-
 =head2 query
 
 Query method can be used in two ways. If the string argument is the 
@@ -197,6 +234,8 @@ sub query {
 		croak("No imput files defined");
 	} 
 
+	$self->set_fields(@{$o->{Fields}});
+
 	# handle, filter, windows start, windows end, ref to filelist 
 	Net::NfDump::libnf_read_files($self->{handle}, $o->{Filter}, 
 					$o->{TimeWindowStart}, $o->{TimeWindowEnd}, 
@@ -207,7 +246,7 @@ sub query {
 
 }
 
-=head2 fetchrow_hashref
+=head2 fetchrow_arrayref
 
 Have to be used after query method. If the query wasn't called before the 
 method is called as $obj->query() before the first record is returned. 
@@ -218,7 +257,7 @@ files have been read.
 
 =cut
 
-sub fetchrow_hashref {
+sub fetchrow_arrayref {
 	my ($self) = @_;
 
 	if (!$self->{read_prepared}) {
@@ -235,16 +274,40 @@ sub fetchrow_hashref {
 	return $ret;
 }
 
-sub fetchrow_arrayref {
-	my ($self) = @_;
-
-	croak("Not implemented yet. Reserver for future use.");
-}
+=head2 fetchrow_array
+=cut 
 
 sub fetchrow_array {
 	my ($self) = @_;
 
-	croak("Not implemented yet. Reserver for future use.");
+	return @{$self->fetchrow_arrayref()};
+}
+
+=head2 fetchrow_hashref
+
+Have to be used after query method. If the query wasn't called before the 
+method is called as $obj->query() before the first record is returned. 
+
+Method returns hash reference with the record and skips to the next record. Returns 
+true if there are more records to read or false if all record from all 
+files have been read. 
+
+=cut
+
+sub fetchrow_hashref {
+	my ($self) = @_;
+
+	my %res;
+	my $ref = $self->fetchrow_arrayref();
+
+	return $ref if (!defined($ref));
+ 
+	my $numfields = scalar @{$self->{fields_txt}};	
+	for (my $x = 0; $x <  $numfields; $x++) {
+		$res{$self->{fields_txt}->[$x]} = $ref->[$x] if defined($ref->[$x]);
+	}
+
+	return \%res;
 }
 
 =head2 create
@@ -261,6 +324,8 @@ sub create {
 		croak("No output file defined");
 	} 
 
+	$self->set_fields(@{$o->{Fields}});
+
 	# handle, filename, compressed, anonyized, identifier 
 	Net::NfDump::libnf_create_file($self->{handle}, 
 		$o->{OutputFile}, 
@@ -272,6 +337,22 @@ sub create {
 }
 
 
+sub storerow_arrayref {
+	my ($self, $row) = @_;
+
+	if (!$self->{write_prepared}) {
+		$self->create();
+	}
+
+	return Net::NfDump::libnf_write_row($self->{handle}, $row);
+}
+
+sub storerow_array {
+	my ($self, @row) = @_;
+
+	return $self->storerow_arrayref(\@row);
+}
+
 =head2 storerow_hashref
 
 Insert data defined in hashref to the file opened by create. 
@@ -281,24 +362,12 @@ Insert data defined in hashref to the file opened by create.
 sub storerow_hashref {
 	my ($self, $row) = @_;
 
-	if (!$self->{write_prepared}) {
-		$self->create();
-	}
+	return undef if (!defined($row));
+
+	$self->set_fields( keys %{$row} );
+
+	return $self->storerow_array( values %{$row} );
 	
-	# handle, row reference
-	return Net::NfDump::libnf_write_row($self->{handle}, $row);
-}
-
-sub storerow_arryref {
-	my ($self, $row) = @_;
-
-	croak("Not implemented yet. Reserver for future use.");
-}
-
-sub storerow_array {
-	my ($self, $row) = @_;
-
-	croak("Not implemented yet. Reserver for future use.");
 }
 
 =head2 finish
@@ -344,6 +413,7 @@ ORDER BY bytes
 LIMIT 100
 
 =head1 NOTE ABOUT 32BIT PLATFORMS
+
 Nfdump primary uses 64 bit counters and other items to store single integer value. However 
 the native 64 bit support is not compiled in every perl. For thoose cases where 
 only 32 integer values are supported the Net::NfDump uses Math::Int64 module. 
@@ -611,75 +681,75 @@ sub txt2flow ($) {
 
 =head1 SUPPORTED ITEMS 
 
-=head2 Time items
+  Time items
+  =====================
+  first - Timestamp of first seen packet 
+  msecfirst - Number of miliseconds of first seen packet since B<first>  
+  last - Timestamp of last seen packet 
+  mseclast - Number of miliseconds of last seen packet since B<last>  
+  received - Timestamp when the packet was received by collector 
 
-first - Timestamp of first seen packet E<10>
-msecfirst - Number of miliseconds of first seen packet since B<first>  E<10>
-last - Timestamp of last seen packet E<10>
-mseclast - Number of miliseconds of last seen packet since B<last>  E<10>
-received - Timestamp when the packet was received by collector E<10>
+  Statistical items
+  =====================
+  bytes - The number of bytes 
+  pkts - The number of packets 
+  outbytes - The number of output bytes 
+  outpkts - The number of output packets 
+  flows - The number of flows (aggregated) 
 
-=head2 Statistical items
+  Layer 4 information
+  =====================
+  srcport - Source port 
+  dstport - Destination port 
+  tcpflags - TCP flags  
 
-bytes - The number of bytes E<10>
-pkts - The number of packets E<10>
-outbytes - The number of output bytes  E<10>
-outpkts - The number of output packets  E<10>
-flows - The number of flows (aggregated) E<10>
+  Layer 3 information
+  =====================
+  srcip - Source IP address 
+  dstip - Destination IP address 
+  nexthop - IP next hop 
+  srcmask - Source mask 
+  dstmask - Destination mask 
+  tos - Source type of service 
+  dsttos - Destination type of Service 
+  srcas - Source AS number 
+  dstas - Destination AS number 
+  nextas - BGP Next AS 
+  prevas - BGP Previous AS 
+  bgpnexthop - BGP next hop 
+  proto - IP protocol  
 
-=head2 Layer 4 information
+  Layer 2 information
+  =====================
+  srcvlan - Source vlan label 
+  dstvlan - Destination vlan label 
+  insrcmac - In source MAC address 
+  outsrcmac - Out destination MAC address 
+  indstmac - In destintation MAC address 
+  outdstmac - Out source MAC address 
 
-srcport - Source port E<10>
-dstport - Destination port E<10>
-tcpflags - TCP flags  E<10>
+  MPLS information
+  =====================
+  mpls - MPLS labels 
 
-=head2 Layer 3 information
+  Layer 1 information
+  =====================
+  inif - SNMP input interface number 
+  outif - SNMP output interface number 
+  dir - Flow directions ingress/egress 
+  fwd - Forwarding status 
 
-srcip - Source IP address E<10>
-dstip - Destination IP address E<10>
-nexthop - IP next hop E<10>
-srcmask - Source mask E<10>
-dstmask - Destination mask E<10>
-tos - Source type of service E<10>
-dsttos - Destination type of Service E<10>
-srcas - Source AS number E<10>
-dstas - Destination AS number E<10>
-nextas - BGP Next AS E<10>
-prevas - BGP Previous AS E<10>
-bgpnexthop - BGP next hop E<10>
-proto - IP protocol  E<10>
+  Exporter information
+  =====================
+  router - Exporting router IP 
+  systype - Type of exporter 
+  sysid - Internal SysID of exporter 
 
-=head2 Layer 2 information
-
-srcvlan - Source vlan label E<10>
-dstvlan - Destination vlan label E<10>
-insrcmac - In source MAC address E<10>
-outsrcmac - Out destination MAC address E<10>
-indstmac - In destintation MAC address E<10>
-outdstmac - Out source MAC address E<10>
-
-=head2 MPLS information
-
-mpls - MPLS labels E<10>
-
-=head2 Layer 1 information
-
-inif - SNMP input interface number E<10>
-outif - SNMP output interface number E<10>
-dir - Flow directions ingress/egress E<10>
-fwd - Forwarding status E<10>
-
-=head2 Exporter information
-
-router - Exporting router IP E<10>
-systype - Type of exporter E<10>
-sysid - Internal SysID of exporter E<10>
-
-=head2 Extra/special fields
-
-clientdelay - nprobe latency client_nw_delay_usec E<10>
-serverdelay - nprobe latency server_nw_delay_usec E<10>
-appllatency - nprobe latency appl_latency_usec E<10>
+  Extra/special fields
+  =====================
+  clientdelay - nprobe latency client_nw_delay_usec 
+  serverdelay - nprobe latency server_nw_delay_usec
+  appllatency - nprobe latency appl_latency_usec
 
 =head1 SEE ALSO
 

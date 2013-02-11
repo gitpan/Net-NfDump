@@ -59,11 +59,15 @@ libnf_create_file(handle, filename, compressed, anonymized, ident)
 	int anonymized
 	char *ident
 
+int 
+libnf_set_fields(handle, fields)
+	int handle
+	SV * fields
 
 int 
-libnf_write_row(handle, hashref)
+libnf_write_row(handle, arrayref)
 	int handle
-	HV * hashref
+	SV * arrayref
 
 
 void 

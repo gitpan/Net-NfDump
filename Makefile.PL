@@ -17,7 +17,7 @@ WriteMakefile(
       (ABSTRACT_FROM  => 'lib/Net/NfDump.pm', # retrieve abstract from module
        AUTHOR         => 'Tomas Podermanski <tpoder@cis.vutbr.cz>') : ()
 	),
-    LIBS              => [''], # e.g., '-lm'
+    LIBS              => ['-lresolv'], # e.g., '-lm'
     DEFINE            => '', # e.g., '-DHAVE_SOMETHING'
     INC               => '-I.', # e.g., '-I. -I/usr/include/other'
 	# Un-comment this if you add C files to link with later:
@@ -51,6 +51,14 @@ else {
   }
 }
 
+
+sub MY::post_constants {
+'
+VERSION_MACRO = LIBNF_VERSION
+DEFINE_VERSION = -D$(VERSION_MACRO)=\"$(VERSION)\"
+';
+}
+
 sub MY::postamble {
 '
 NFDUMP		= nfdump-1.6.8p1
@@ -79,10 +87,11 @@ nfdump: $(NFDUMP).tar.gz
 		tar xzf $(NFDUMP).tar.gz
 		$(MV) -f $(NFDUMP) nfdump 
 		# nfdump gzip contains object files, so we rid them off
-		$(RM_F) nfdump/bin/*.o
 		$(RM_F) nfdump/bin/nfdump
+		$(RM_F) nfdump/bin/*.o
 		#cd nfdump && export CFLAGS=-fPIC && ./configure && make 
 		cd nfdump && export CFLAGS=-fPIC && ./configure --enable-nsel && cd bin && make nfdump
+		$(RM_F) nfdump/bin/*.o
 
 $(MYEXTLIB): nfdump libnf/Makefile
 		cd libnf && $(MAKE) $(PASSTHRU)

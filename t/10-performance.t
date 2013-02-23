@@ -9,7 +9,8 @@ require "t/ds.pl";
 
 # testing performance 
 diag "";
-diag "Testing hashref performance, it will take while...";
+diag "Testing  performance, it will take while...";
+diag "Method \$obj->storerow_hashref():";
 my $recs = 100000;
 
 my %tests = ( 'v4_basic_raw' => 'basic items', 'v4_raw' => 'all items' );
@@ -24,7 +25,7 @@ while (my ($key, $val) = each %tests ) {
 	$flow->finish();
 
 	my $tm2 = time() - $tm1;
-	diag sprintf("Write performance %s, written %d recs in %d secs (%.3f/sec)", $val, $recs, $tm2, $recs/$tm2);
+	diag sprintf("  %s: written %d recs in %d secs (%d/sec)", $val, $recs, $tm2, $recs/$tm2);
 }
 
 
@@ -39,11 +40,11 @@ while (my ($key, $val) = each %tests ) {
 	$flow->finish();
 
 	my $tm2 = time() - $tm1;
-	diag sprintf("Read performance %s, read %d recs in %d secs (%.3f/sec)", $val, $cnt, $tm2, $recs/$tm2);
+	diag sprintf("  %s: read %d recs in %d secs (%d/sec)", $val, $cnt, $tm2, $recs/$tm2);
 }
 
-diag "Testing arrayref performance, it will take while...";
-$recs = 2000000;
+diag "Method  \$obj->storerow_arrayref():";
+$recs = 1000000;
 
 %tests = ( 'v4_basic_raw' => 'basic items', 'v4_raw' => 'all items' );
 
@@ -58,7 +59,7 @@ while (my ($key, $val) = each %tests ) {
 	$flow->finish();
 
 	my $tm2 = time() - $tm1;
-	diag sprintf("Write performance %s, written %d recs in %d secs (%d/sec)", $val, $recs, $tm2, $recs/$tm2);
+	diag sprintf("  %s: written %d recs in %d secs (%d/sec)", $val, $recs, $tm2, $recs/$tm2);
 }
 
 
@@ -74,7 +75,29 @@ while (my ($key, $val) = each %tests ) {
 	$flow->finish();
 
 	my $tm2 = time() - $tm1;
-	diag sprintf("Read performance %s, read %d recs in %d secs (%d/sec)", $val, $cnt, $tm2, $recs/$tm2);
+	diag sprintf("  %s: read %d recs in %d secs (%d/sec)", $val, $cnt, $tm2, $recs/$tm2);
+}
+
+diag "Method  \$obj->clonerow():";
+
+%tests = ( 'v4_basic_raw' => 'basic items', 'v4_raw' => 'all items' );
+
+while (my ($key, $val) = each %tests ) {
+	my $flowr = new Net::NfDump(InputFiles => [ "t/flow_$key.tmp" ], Fields => [ 'bytes' ] );
+	my $floww = new Net::NfDump(OutputFile => "t/flow_clone_$key.tmp", Fields => [ 'bytes' ] );
+	my $tm1 = time();
+	my $cnt = 0;
+	$flowr->query();
+	while ( $row = $flowr->fetchrow_arrayref() )  {
+		$floww->clonerow($flowr);
+		$floww->storerow_arrayref($row);
+		$cnt++ if ($row);
+	}
+	$floww->finish();
+	$flowr->finish();
+
+	my $tm2 = time() - $tm1;
+	diag sprintf("  %s: read/write %d recs in %d secs (%d/sec)", $val, $cnt, $tm2, $recs/$tm2);
 }
 
 ok(1);

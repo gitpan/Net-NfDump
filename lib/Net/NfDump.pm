@@ -34,7 +34,7 @@ our @EXPORT = qw(
 	
 );
 
-our $VERSION = '0.02_03';
+our $VERSION = '0.02_04';
 
 sub AUTOLOAD {
     # This AUTOLOAD is used to 'autoload' constants from the constant()
@@ -76,24 +76,34 @@ Net::NfDump - Perl API for manipulating with nfdump files
 
   use Net::NfDump;
  
-  my $src = new Net::NfDump(
-        InputFiles => [ 'nfdump_file' ], 
+  my $flow = new Net::NfDump(
+        InputFiles => [ 'nfdump_file1', 'nfdump_file2' ], 
         Filter => 'icmp and src net 10.0.0.0/8',
-        Fields => [ '*' ] ); 
+        Fields => 'srcip, dstip, bytes' ); 
 
-  my $dst = new Net::NfDump(
-        OutputFile => 'nfdump_icmp_private',
-        Fields => [ '*' ] );
+  %h;
+  $flow->query();
+  while (my ($srcip, $dstip, $bytes) = $src->fetchrow_array() )  {
 
-  $src->query();
-
-  while (my $row = $src->fetchrow_arrayref() )  {
-
-     $dst->storerow_arrayref($row);
+     $h{"$srcip -> $dstip"} += $bytes;	
 
   }
+  $flow->finish();
+ 
+  # print stattistics 
+  while ( my ($k, $v) = each %h ) {
+     printf "%s : %d\n", $k, $v;
+  }
 
-  $src->finish();
+
+  #Example 2: 
+  
+  
+  my $flow = new Net::NfDump(
+        OutputFile => 'output.nfcap',
+        Fields => 'srcip,dstip' );
+
+  $flow->storerow_arrayref(txt2ip('147.229.3.10'), txt2ip('1.2.3.4'));
   $dst->finish();
 
 
@@ -103,6 +113,21 @@ Net::NfDump - Perl API for manipulating with nfdump files
 =head1 METHODS
 
 =cut 
+
+# converts comma seperated string to array reference 
+sub split_str($) {
+	my ($arg) = @_;
+
+	if (ref $arg eq 'ARRAY') {
+		# already is an array
+		return $arg;
+	} else {
+		my @arr = split(/,\s*/, $arg);
+		return \@arr;
+	}
+
+}
+
 
 # merge $opts with class default opts and return the resilt. 
 
@@ -116,22 +141,24 @@ sub merge_opts {
 	}
 
 	while ( my ($key, $val) =  each %opts ) {
+		if ($key eq "InputFiles" || $key eq "Fields") {
+			$val = split_str($val);
+		}
 		$ropts->{$key} = $val;
 	}
 
 	return $ropts; 
 }
 
-
 # Internal function to set output items/fields. At the input takes array that 
 # represents string names of the files 
 sub set_fields {
-	my ($self, @fields) = @_;
+	my ($self, $fieldsref) = @_;
 
 	$self->{fields_num} = [];
 	$self->{fields_txt} = [];
 
-	foreach (@fields) {
+	foreach (@{$fieldsref}) {
 
 		my $fld = lc($_);
 
@@ -223,6 +250,7 @@ sub new {
 	$class->{read_prepared} = 0;
 	$class->{write_prepared} = 0;
 	$class->{closed} = 0;
+	$class->{last_hashref_items} = "";
 
 	return $class;
 }
@@ -278,7 +306,7 @@ sub query {
 		croak("No imput files defined");
 	} 
 
-	$self->set_fields(@{$o->{Fields}});
+	$self->set_fields($o->{Fields});
 
 	# handle, filter, windows start, windows end, ref to filelist 
 	Net::NfDump::libnf_read_files($self->{handle}, $o->{Filter}, 
@@ -327,7 +355,11 @@ Same functionality as fetchrow_arrayref however returns items in array.
 sub fetchrow_array {
 	my ($self) = @_;
 
-	return @{$self->fetchrow_arrayref()};
+	my $ref = $self->fetchrow_arrayref();
+
+	return if (!defined($ref));
+
+	return @{$ref};
 }
 
 =head2 fetchrow_hashref
@@ -344,7 +376,7 @@ sub fetchrow_hashref {
 	my %res;
 	my $ref = $self->fetchrow_arrayref();
 
-	return $ref if (!defined($ref));
+	return if (!defined($ref));
  
 	my $numfields = scalar @{$self->{fields_txt}};	
 	for (my $x = 0; $x <  $numfields; $x++) {
@@ -368,7 +400,7 @@ sub create {
 		croak("No output file defined");
 	} 
 
-	$self->set_fields(@{$o->{Fields}});
+	$self->set_fields($o->{Fields});
 
 	# handle, filename, compressed, anonyized, identifier 
 	Net::NfDump::libnf_create_file($self->{handle}, 
@@ -423,9 +455,12 @@ sub storerow_hashref {
 
 	return undef if (!defined($row));
 
-	$self->set_fields( keys %{$row} );
+	if (join(',', keys %{$row}) ne $self->{last_hashref_items}) {
+		$self->set_fields( [ keys %{$row} ] );
+		$self->{last_hashref_items} = join(',', keys %{$row});
+	}
 
-	return $self->storerow_array( values %{$row} );
+	return $self->storerow_arrayref( [ values %{$row} ] );
 	
 }
 

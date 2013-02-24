@@ -44,7 +44,7 @@ while (my ($key, $val) = each %tests ) {
 }
 
 diag "Method  \$obj->storerow_arrayref():";
-$recs = 1000000;
+$recs = 2000000;
 
 %tests = ( 'v4_basic_raw' => 'basic items', 'v4_raw' => 'all items' );
 

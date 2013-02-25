@@ -11,7 +11,7 @@ require "t/ds.pl";
 diag "";
 diag "Testing  performance, it will take while...";
 diag "Method \$obj->storerow_hashref():";
-my $recs = 100000;
+my $recs = 300000;
 
 my %tests = ( 'v4_basic_raw' => 'basic items', 'v4_raw' => 'all items' );
 

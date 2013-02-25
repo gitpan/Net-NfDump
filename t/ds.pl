@@ -5,9 +5,9 @@ our %DS;		# data sets
 
 $DS{'v4_basic_txt'} = {
 	'first' => '1355439616',
-	'msecfirst' => '747',
+#	'msecfirst' => '747',
 	'last' => '1355439616',
-	'mseclast' => '748',
+#	'mseclast' => '748',
 	
 	'bytes' => '291',
 	'pkts' => '5',
@@ -25,9 +25,9 @@ $DS{'v4_basic_txt'} = {
 
 $DS{'v4_txt'} = {
 	'first' => '1355439616',
-	'msecfirst' => '747',
+#	'msecfirst' => '747',
 	'last' => '1355439616',
-	'mseclast' => '748',
+#	'mseclast' => '748',
 	'received' => '22341355439617',
 	
 	'bytes' => '291',

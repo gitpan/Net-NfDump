@@ -61,10 +61,10 @@ DEFINE_VERSION = -D$(VERSION_MACRO)=\"$(VERSION)\"
 
 sub MY::postamble {
 '
-NFDUMP		= nfdump-1.6.8p1
-#NFDUMP		= nfdump-1.6.9b2
-NFDUMP_MD5	= 853d917527d1a20837a899ffd88b736c
-#NFDUMP_MD5	= 22a8c79e8219e474649ee37f027e015c
+#NFDUMP		= nfdump-1.6.8p1
+#NFDUMP_MD5	= 853d917527d1a20837a899ffd88b736c
+NFDUMP		= nfdump-1.6.9
+NFDUMP_MD5	= 6c0adfcfdacd402f2251006b4c962e3f
 NFDUMP_SRC	= $(NFDUMP).tar.gz
 NFDUMP_URL	= http://downloads.sourceforge.net/project/nfdump/stable/$(NFDUMP)/$(NFDUMP_SRC)
 
@@ -86,11 +86,13 @@ nfdump: $(NFDUMP).tar.gz
 		./md5sum.sh $(NFDUMP_MD5) $(NFDUMP).tar.gz 
 		tar xzf $(NFDUMP).tar.gz
 		$(MV) -f $(NFDUMP) nfdump 
+		# apply patches in beta code 
+		cd nfdump && patch -p1 < ../nfdump-bugs.patch && cd ..
 		# nfdump gzip contains object files, so we rid them off
 		$(RM_F) nfdump/bin/nfdump
 		$(RM_F) nfdump/bin/*.o
 		#cd nfdump && export CFLAGS=-fPIC && ./configure && make 
-		cd nfdump && export CFLAGS=-fPIC && ./configure --enable-nsel && cd bin && make nfdump
+		cd nfdump && export CFLAGS=-fPIC && ./configure --enable-nsel --enable-nel && cd bin && make nfdump
 		$(RM_F) nfdump/bin/*.o
 
 $(MYEXTLIB): nfdump libnf/Makefile

@@ -34,7 +34,7 @@ our @EXPORT = qw(
 	
 );
 
-our $VERSION = '0.02_07';
+our $VERSION = '0.04';
 
 sub AUTOLOAD {
     # This AUTOLOAD is used to 'autoload' constants from the constant()
@@ -149,21 +149,21 @@ Net::NfDump - Perl API for manipulating with nfdump files
 
 Nfdump L<http://nfdump.sourceforge.net/> is very polpular toolset 
 for collecting, storing and processing NetFlow/SFlow/IPFIX data. The 
-one of the key tool is command line utility that bears the same name
+one of the key tool is command line utility bearing the same name
 as whole toolset (nfdump). Although this utility can process data 
 very speed, it is cumbersome for some apllications. 
 
-The module implements basic operations on binary files produced
+This module implements basic operations on binary files produced
 with nfdump tool. It allows read, create and write flow records on
-those files.  The modules tries to keep naming conventions for 
-methods same as iare used n DBI nodules/API, so developers that 
+thoose files.  The modules tries to keep naming conventions for 
+methods same as are used in DBI nodules/API, so developers that 
 are used to use this interface should be famillar with the 
 interface. 
 
 The module uses original nfdump sources to implement nescessary 
-functions. The compatibility with original 
-nfdump should be asisly keeps and maintance of code 
-to cope with future version shoul be minnimal. 
+functions. The compatibility with the original 
+nfdump should be eaisly keet and there should be a minimal effort
+to cope with future version of original nfdump. 
 
 The architecture is following: 
 
@@ -174,7 +174,7 @@ The architecture is following:
    | Net::NfDump API (perl) |  described in this document.
    |                        |
    +------------------------+
-   |                        |  reates code that converts internal nfdump 
+   |                        |  Creates the code converting internal nfdump 
    | libnf - glue code (C)  |  structures into perl and back to C.
    |                        |
    +------------------------+
@@ -185,7 +185,7 @@ The architecture is following:
          NFDUMP FILES
 
 
-This version of Net::NfDump module is based on B<nfdump-1.6.8p1> available on L<http://sourceforge.net/projects/nfdump/>.
+This version of Net::NfDump module is based on B<nfdump-1.6.9> available on L<http://sourceforge.net/projects/nfdump/>. Support for NSEL and NEL code is enabled. 
 
 
 =cut 
@@ -199,6 +199,7 @@ sub split_str($) {
 		return $arg;
 	} else {
 		my @arr = split(/,\s*/, $arg);
+		chomp @arr;
 		return \@arr;
 	}
 
@@ -940,7 +941,8 @@ txt2flow does opossite functionality.
 my %CVTTYPE = ( 
 	'srcip' => 'ip', 'dstip' => 'ip', 'nexthop' => 'ip', 'bgpnexthop' => 'ip', 'router' => 'ip',
 	'insrcmac' => 'mac', 'outsrcmac' => 'mac', 'indstmac' => 'mac', 'outdstmac' => 'mac',
-	'mpls' => 'mpls' );
+	'mpls' => 'mpls',
+	'xsrcip' => 'ip', 'xdstip' => 'ip', 'nsrcip' => 'ip', 'ndstip' => 'ip' );
 	
 
 sub flow2txt ($) {
@@ -1104,11 +1106,42 @@ sub file_info {
   systype - Type of exporter 
   sysid - Internal SysID of exporter 
 
+  NSEL fields, see: http://www.cisco.com/en/US/docs/security/asa/asa81/netflow/netflow.html
+  =====================
+  flowstart - NSEL The time that the flow was create
+  connid - NSEL An identifier of a unique flow for the device 
+  icmpcode - NSEL ICMP code value 
+  icmptype - NSEL ICMP type value 
+  event - NSEL High-level event code
+  xevent - NSEL Extended event code
+  xsrcip - NSEL Mapped source IPv4 address 
+  xdstip - NSEL Mapped destination IPv4 address 
+  xsrcport - NSEL Mapped source port 
+  xdstport - NSEL Mapped destination port 
+ NSEL The input ACL that permitted or denied the flow
+  iacl - Hash value or ID of the ACL name
+  iace - Hash value or ID of the ACL name 
+  ixace - Hash value or ID of an extended ACE configuration 
+ NSEL The output ACL that permitted or denied a flow  
+  eacl - Hash value or ID of the ACL name
+  eace - Hash value or ID of the ACL name
+  exace - Hash value or ID of an extended ACE configuration
+  username - NSEL username
+
+  NEL (NetFlow Event Logging) fields
+  =====================
+  nevent - NEL NAT Event
+  nsrcport - NEL NAT src port 
+  ndstport - NEL NAT dst port
+  vrf - NEL NAT ingress vrf id 
+  nsrcip - NEL NAT inside address
+  ndstip - NEL NAT outside address
+
   Extra/special fields
   =====================
-  clientdelay - nprobe latency client_nw_delay_usec 
-  serverdelay - nprobe latency server_nw_delay_usec
-  appllatency - nprobe latency appl_latency_usec
+  cl - nprobe latency client_nw_delay_usec 
+  sl - nprobe latency server_nw_delay_usec
+  al - nprobe latency appl_latency_usec
 
 =head1 PERFORMANCE
 
@@ -1191,7 +1224,7 @@ the native 64 bit support is not compiled in every perl. For thoose cases where
 only 32 integer values are supported the C<Net::NfDump> uses C<Math::Int64> module. 
 
 The build scripts automatically detect the platform and C<Math::Int64> module is required
-only on platforms where perl do not supports 64bit integer values. 
+only on platforms where available perl do not supports 64bit integer values. 
 
 =head1 SEE ALSO
 

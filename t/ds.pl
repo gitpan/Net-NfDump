@@ -74,9 +74,9 @@ $DS{'v4_txt'} = {
    	'sysid' => '0',
    	'systype' => '0',
 
-#	'clientdelay' => '100', 
-#	'serverdelay' => '200',
-#	'appllatency' => '300'
+	'cl' => '100', 
+	'sl' => '200',
+	'al' => '300'
 
 };
 

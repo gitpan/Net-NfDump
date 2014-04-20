@@ -366,7 +366,7 @@ libnf_instance_t *instance = libnf_instances[handle];
 HV *res;
 
 	if (instance == NULL ) {
-		croak("%s handler %d not initialized", NFL_LOG);
+		croak("%s handler %d not initialized", NFL_LOG, handle);
 		return 0;
 	}
 
@@ -397,7 +397,7 @@ int i=0;
 uint64_t t;
 
 	if (instance == NULL ) {
-		croak("%s handler %d not initialized", NFL_LOG);
+		croak("%s handler %d not initialized", NFL_LOG, handle);
 		return 0;
 	}
 
@@ -595,8 +595,8 @@ uint64_t t;
 
 			// NSEL 
 #ifdef NSEL
-			case NFL_I_FLOW_START:
-					sv = uint64_to_SV(rec->flow_start, 
+			case NFL_I_EVENT_TIME:
+					sv = uint64_to_SV(rec->event_time, 
 						bit_array_get(&instance->ext_r, EX_NSEL_COMMON) );
 					break;
 			case NFL_I_CONN_ID:
@@ -609,10 +609,6 @@ uint64_t t;
 					break;
 			case NFL_I_ICMP_TYPE:
 					sv = uint_to_SV(rec->icmp_type, 
-						bit_array_get(&instance->ext_r, EX_NSEL_COMMON) );
-					break;
-			case NFL_I_FW_EVENT:
-					sv = uint_to_SV(rec->fw_event, 
 						bit_array_get(&instance->ext_r, EX_NSEL_COMMON) );
 					break;
 			case NFL_I_FW_XEVENT:
@@ -673,18 +669,41 @@ uint64_t t;
 			// END OF NSEL 
 		
 			// NEL support
-			case NFL_I_NAT_EVENT:
-					sv = uint_to_SV(rec->nat_event, 
-						bit_array_get(&instance->ext_r, EX_NEL_COMMON) );
-					break;
 			case NFL_I_INGRESS_VRFID:
 					sv = uint_to_SV(rec->ingress_vrfid, 
+						bit_array_get(&instance->ext_r, EX_NEL_COMMON) );
+					break;
+			case NFL_I_EVENT_FLAG:
+					sv = uint_to_SV(rec->event_flag, 
+						bit_array_get(&instance->ext_r, EX_NEL_COMMON) );
+					break;
+			case NFL_I_EGRESS_VRFID:
+					sv = uint_to_SV(rec->egress_vrfid, 
 						bit_array_get(&instance->ext_r, EX_NEL_COMMON) );
 					break;
 
 			// END OF NEL 
 #endif // NEL 
 
+			// EX_PORT_BLOCK_ALLOC - added 2014-04-19
+			case NFL_I_BLOCK_START:
+					sv = uint_to_SV(rec->block_start, 
+						bit_array_get(&instance->ext_r, EX_PORT_BLOCK_ALLOC) );
+					break;
+			case NFL_I_BLOCK_END:
+					sv = uint_to_SV(rec->block_end, 
+						bit_array_get(&instance->ext_r, EX_PORT_BLOCK_ALLOC) );
+					break;
+			case NFL_I_BLOCK_STEP:
+					sv = uint_to_SV(rec->block_step, 
+						bit_array_get(&instance->ext_r, EX_PORT_BLOCK_ALLOC) );
+					break;
+			case NFL_I_BLOCK_SIZE:
+					sv = uint_to_SV(rec->block_size, 
+						bit_array_get(&instance->ext_r, EX_PORT_BLOCK_ALLOC) );
+					break;
+
+			// extra fileds
 			case NFL_I_CLIENT_NW_DELAY_USEC:
 					sv = uint64_to_SV(rec->client_nw_delay_usec, 
 						bit_array_get(&instance->ext_r, EX_LATENCY) );
@@ -800,7 +819,7 @@ int i;
 	while (libnf_instances[handle] != NULL) {
 		handle++;
 		if (handle >= NFL_MAX_INSTANCES - 1) {
-			croak("% no free handles available, max instances %d reached", NFL_LOG, NFL_MAX_INSTANCES);
+			croak("%s no free handles available, max instances %d reached", NFL_LOG, NFL_MAX_INSTANCES);
 			return 0;	
 		}
 	}
@@ -809,7 +828,7 @@ int i;
 	memset(instance, 0, sizeof(libnf_instance_t));
 
 	if (instance == NULL) {
-		croak("% can not allocate memory for instance:", NFL_LOG );
+		croak("%s can not allocate memory for instance:", NFL_LOG );
 		return 0;
 	}
 
@@ -840,7 +859,7 @@ I32 last_field = 0;
 int i;
 
 	if (instance == NULL ) {
-		croak("%s handler %d not initialized", NFL_LOG);
+		croak("%s handler %d not initialized", NFL_LOG, handle);
 		return 0;
 	}
 
@@ -887,7 +906,7 @@ I32 numfiles = 0;
 int i;
 
 	if (instance == NULL ) {
-		croak("%s handler %d not initialized", NFL_LOG);
+		croak("%s handler %d not initialized", NFL_LOG, handle);
 		return 0;
 	}
 
@@ -941,7 +960,7 @@ int libnf_create_file(int handle, char *filename, int compressed, int anonymized
 libnf_instance_t *instance = libnf_instances[handle];
 
 	if (instance == NULL ) {
-		croak("%s handler %d not initialized", NFL_LOG);
+		croak("%s handler %d not initialized", NFL_LOG, handle);
 		return 0;
 	}
 
@@ -973,7 +992,7 @@ int match;
 uint32_t map_id;
 
 	if (instance == NULL ) {
-		croak("%s handler %d not initialized", NFL_LOG);
+		croak("%s handler %d not initialized", NFL_LOG, handle);
 		return 0;
 	}
 
@@ -1092,8 +1111,8 @@ begin:
 		instance->flow_record = (common_record_t *)((pointer_addr_t)instance->flow_record + instance->flow_record->size);	
 		goto begin;
 
-	} else if ( instance->flow_record->type != CommonRecordType ) {
-		warn("%s Skip unknown record type %i\n", NFL_LOG, instance->flow_record->type);
+	} else if ( instance->flow_record->type != CommonRecordType && instance->flow_record->type != CommonRecordV0Type) {
+		warn("%s Skip unknown record type %d\n", NFL_LOG, instance->flow_record->type);
 		instance->flow_record = (common_record_t *)((pointer_addr_t)instance->flow_record + instance->flow_record->size);	
 		goto begin;
 	}
@@ -1160,12 +1179,12 @@ libnf_instance_t *instance = libnf_instances[handle];
 libnf_instance_t *src_instance = libnf_instances[src_handle];
 
 	if (instance == NULL ) {
-		croak("%s handler %d not initialized", NFL_LOG);
+		croak("%s handler %d not initialized", NFL_LOG, handle);
 		return 0;
 	}
 
 	if (src_instance == NULL ) {
-		croak("%s seource handler %d not initialized", NFL_LOG);
+		croak("%s seource handler %d not initialized", NFL_LOG, handle);
 		return 0;
 	}
 
@@ -1187,7 +1206,7 @@ int i, res;
 uint64_t t;
 
 	if (instance == NULL ) {
-		croak("%s handler %d not initialized", NFL_LOG);
+		croak("%s handler %d not initialized", NFL_LOG, handle);
 		return 0;
 	}
 
@@ -1472,8 +1491,8 @@ uint64_t t;
 
 			// NSEL 
 #ifdef NSEL
-			case NFL_I_FLOW_START:
-					rec->flow_start = SvU64(sv);
+			case NFL_I_EVENT_TIME:
+					rec->event_time = SvU64(sv);
 					bit_array_set(&instance->ext_w, EX_NSEL_COMMON, 1);
 					break;
 			case NFL_I_CONN_ID:
@@ -1486,10 +1505,6 @@ uint64_t t;
 					break;
 			case NFL_I_ICMP_TYPE:
 					rec->icmp_type = SvUV(sv);
-					bit_array_set(&instance->ext_w, EX_NSEL_COMMON, 1);
-					break;
-			case NFL_I_FW_EVENT:
-					rec->fw_event = SvUV(sv);
 					bit_array_set(&instance->ext_w, EX_NSEL_COMMON, 1);
 					break;
 			case NFL_I_FW_XEVENT:
@@ -1584,19 +1599,41 @@ uint64_t t;
 			// END OF NSEL 
 			
 			// NEL support
-			case NFL_I_NAT_EVENT:
-					rec->nat_event = SvUV(sv);
-					bit_array_set(&instance->ext_w, EX_NEL_COMMON, 1);
-					break;
 			case NFL_I_INGRESS_VRFID:
 					rec->ingress_vrfid = SvUV(sv);
+					bit_array_set(&instance->ext_w, EX_NEL_COMMON, 1);
+					break;
+			case NFL_I_EVENT_FLAG:
+					rec->event_flag = SvUV(sv);
+					bit_array_set(&instance->ext_w, EX_NEL_COMMON, 1);
+					break;
+			case NFL_I_EGRESS_VRFID:
+					rec->egress_vrfid = SvUV(sv);
 					bit_array_set(&instance->ext_w, EX_NEL_COMMON, 1);
 					break;
 #endif 
 
 			// END OF NEL 
 
+			// EX_PORT_BLOCK_ALLOC added 2014-04-19
+			case NFL_I_BLOCK_START:
+					rec->block_start = SvUV(sv);
+					bit_array_set(&instance->ext_w, EX_PORT_BLOCK_ALLOC, 1);
+					break;
+			case NFL_I_BLOCK_END:
+					rec->block_end = SvUV(sv);
+					bit_array_set(&instance->ext_w, EX_PORT_BLOCK_ALLOC, 1);
+					break;
+			case NFL_I_BLOCK_STEP:
+					rec->block_step = SvUV(sv);
+					bit_array_set(&instance->ext_w, EX_PORT_BLOCK_ALLOC, 1);
+					break;
+			case NFL_I_BLOCK_SIZE:
+					rec->block_size = SvUV(sv);
+					bit_array_set(&instance->ext_w, EX_PORT_BLOCK_ALLOC, 1);
+					break;
 
+			// extra fields
 			case NFL_I_CLIENT_NW_DELAY_USEC:
 					rec->client_nw_delay_usec = SvU64(sv);
 					bit_array_set(&instance->ext_w, EX_LATENCY, 1);
@@ -1648,7 +1685,7 @@ void libnf_finish(int handle) {
 libnf_instance_t *instance = libnf_instances[handle];
 
 	if (instance == NULL ) {
-		croak("%s handler %d not initialized", NFL_LOG);
+		croak("%s handler %d not initialized", NFL_LOG, handle);
 		return;
 	}
 

@@ -34,6 +34,7 @@ t/data2
 examples/example1.pl
 examples/download_asn_db
 examples/nf_asn_geo_update
-nfdump-1.6.11.tar.gz
+nfdump-1.6.12.tar.gz
 nfdump-bugs.patch 
-META.yml                                 Module meta-data (added by MakeMaker)
+META.yml                                 Module YAML meta-data (added by MakeMaker)
+META.json                                Module JSON meta-data (added by MakeMaker)

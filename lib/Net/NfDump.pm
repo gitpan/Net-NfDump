@@ -35,7 +35,7 @@ our @EXPORT = qw(
 	
 );
 
-our $VERSION = '0.12';
+our $VERSION = '0.13';
 
 sub AUTOLOAD {
     # This AUTOLOAD is used to 'autoload' constants from the constant()
@@ -146,6 +146,8 @@ Net::NfDump - Perl API for manipulating with nfdump files
   $flow2->finish();
 
 
+
+
 =head1 DESCRIPTION
 
 Nfdump L<http://nfdump.sourceforge.net/> is a very popular toolset 
@@ -184,8 +186,13 @@ The architecture is following:
          NFDUMP FILES
 
 
-This version of Net::NfDump module is based on B<nfdump-1.6.10> available on L<http://sourceforge.net/projects/nfdump/>. Support for NSEL and NEL code is enabled. 
+This version of Net::NfDump module is based on B<nfdump-1.6.12> available on L<http://sourceforge.net/projects/nfdump/>. Support for NSEL code is enabled. 
 
+=head1 WARMING FOR VERSION >= 0.13
+
+The files created by Net::NfDump version >= 0.13 can be read only with 
+nfdump 1.6.12 and newer. For reading it supports all formats
+starting with nfdump 1.6.
 
 =cut 
 
@@ -1105,11 +1112,10 @@ sub file_info {
 
   NSEL fields, see: http://www.cisco.com/en/US/docs/security/asa/asa81/netflow/netflow.html
   =====================
-  flowstart - NSEL The time that the flow was created
+  eventtime - NSEL The time that the flow was created
   connid - NSEL An identifier of a unique flow for the device 
   icmpcode - NSEL ICMP code value 
   icmptype - NSEL ICMP type value 
-  event - NSEL High-level event code
   xevent - NSEL Extended event code
   xsrcip - NSEL Mapped source IPv4 address 
   xdstip - NSEL Mapped destination IPv4 address 
@@ -1127,8 +1133,16 @@ sub file_info {
 
   NEL (NetFlow Event Logging) fields
   =====================
-  nevent - NEL NAT Event
-  vrf - NEL NAT ingress vrf id 
+  ingressvrfid - NEL NAT ingress vrf id 
+  eventflag -  NAT event flag (always set to 1 by nfdump)
+  egressvrfid -  NAT egress VRF ID
+
+  NEL Port Block Allocation (added 2014-04-19)
+  =====================
+  blockstart -  NAT pool block start
+  blockend -  NAT pool block end 
+  blockstep -  NAT pool block step
+  blocksize -  NAT pool block size
 
   Extra/special fields
   =====================
@@ -1218,19 +1232,35 @@ only 32 integer values are supported, the C<Net::NfDump> uses C<Math::Int64> mod
 The build scripts detect the platform automatically and C<Math::Int64> module is required
 only on platforms where an available perl does not support 64bit integer values. 
 
-=head1 EXAMPLES OF USE 
+=head1 AGGREGATION, STATISTICS AND SORTING
 
-There are several examples in the C<examples> directory. 
+The current version of Net::NfDump do not support aggregation, statistics
+and sorting. This features are planned for future version. However
+tehere are some workarounnds how to use thoose features in Net::NfDump.
 
 =over 
 
 =item * 
 
-C<example1.pl> -  The trivial example showing how the C<Net::NfDump> can be used for 
-reading files. In the example, the progress bar is also used to show the status 
-of processed files. 
+Implement functions as part of perl code. However this approach might lead
+to very low performance. 
 
 =item * 
+
+Preprocess the data with nfdump utility and write output into separate 
+file (in nfdump format, -w option). For exmaple:
+
+  nfdump -R 12 -w out -A dstport "dst net 147.229.0.0/16"
+
+Then read data in Net::NfDump from out. 
+
+=back
+
+
+=head1 EXAMPLES OF USE 
+
+There are several examples in the C<examples> directory. 
+
 
 C<download_asn_db>, C<nf_asn_geo_update> - The set of scripts for updating the information 
 about AS numbers and country codes based on BGP and geolocation database. Every flow 

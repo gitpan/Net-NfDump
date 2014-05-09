@@ -1,23 +1,23 @@
----
-abstract: 'Perl API for manipulating with nfdump files'
+--- #YAML:1.0
+name:               Net-NfDump
+version:            0.99_01
+abstract:           Perl API for manipulating with nfdump files
 author:
-  - 'Tomas Podermanski <tpoder@cis.vutbr.cz>'
-build_requires:
-  ExtUtils::MakeMaker: 0
+    - Tomas Podermanski <tpoder@cis.vutbr.cz>
+license:            perl
+distribution_type:  module
 configure_requires:
-  ExtUtils::MakeMaker: 0
-dynamic_config: 1
-generated_by: 'ExtUtils::MakeMaker version 6.6302, CPAN::Meta::Converter version 2.120921'
-license: perl
-meta-spec:
-  url: http://module-build.sourceforge.net/META-spec-v1.4.html
-  version: 1.4
-name: Net-NfDump
-no_index:
-  directory:
-    - t
-    - inc
+    ExtUtils::MakeMaker:  0
+build_requires:
+    ExtUtils::MakeMaker:  0
 requires:
-  Socket6: 0.15
-  strict: 0
-version: 0.14
+    Socket6:  0.15
+    strict:   0
+no_index:
+    directory:
+        - t
+        - inc
+generated_by:       ExtUtils::MakeMaker version 6.56
+meta-spec:
+    url:      http://module-build.sourceforge.net/META-spec-v1.4.html
+    version:  1.4

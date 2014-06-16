@@ -4,6 +4,16 @@ use ExtUtils::MakeMaker;
 use POSIX;
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
+
+#if ( -e 'libnf/configure.ac' ) {
+#	$ver = `cat libnf/configure.ac | grep INIT | grep libnf | cut -f2 -d,`;
+#	chomp $ver;
+#} else {
+#	$ver = "0.??";
+#}
+#
+#printf "Version detected from libnf/configure.ac %s\n", $ver;
+
 WriteMakefile(
     NAME              => 'Net::NfDump',
     VERSION_FROM      => 'lib/Net/NfDump.pm', # finds $VERSION
@@ -22,10 +32,11 @@ WriteMakefile(
     INC               => '-I. -I nfdump/bin', # e.g., '-I. -I/usr/include/other'
 	# Un-comment this if you add C files to link with later:
     OBJECT            => '$(O_FILES)', # link all the C files too
-    MYEXTLIB          => 'libnf/libnf_perl$(LIB_EXT)',
+    MYEXTLIB          => 'libnf_perl/libnf_perl$(LIB_EXT)',
     NORECURS          => 0,
-    clean             => {FILES => "nfdump/ nfdump t/*.tmp" },
-    realclean         => {FILES => "nfdump-*.tar.gz"},
+	PREOP             => 'make dist-preop',
+    clean             => {FILES => "t/*.tmp" },
+    realclean         => {FILES => "libnf Net-NfDump-* libnf-*.tar.gz"},
 );
 if  (eval {require ExtUtils::Constant; 1}) {
   # If you edit these definitions to change the constants used by this module,
@@ -51,51 +62,36 @@ else {
   }
 }
 
-
-sub MY::post_constants {
-'
-VERSION_MACRO = LIBNF_VERSION
-DEFINE_VERSION = -D$(VERSION_MACRO)=\"$(VERSION)\"
-';
-}
-
 sub MY::postamble {
 '
-NFDUMP		= nfdump-1.6.12
-#NFDUMP_MD5	= 2b90d9f799d7f16b854485dffbe08e54
-NFDUMP_MD5	= e55a9130c93cfb9ed24b01bccd691bcb
-NFDUMP_SRC	= $(NFDUMP).tar.gz
-NFDUMP_URL	= http://downloads.sourceforge.net/project/nfdump/stable/$(NFDUMP)/$(NFDUMP_SRC)
+libnf/configure: 
+		# if there is svn checkout preffer direct 
+		# connection to the libnf source isn svn 
+		if [ -d ../../c ] ; then ln -f -s ../../c libnf && (cd libnf && ./prepare-nfdump.sh && cd ..) ; fi 
+		# else decompress libnf tar and link 
+		(tar xzf libnf-$(VERSION).tar.gz && ln -s libnf-$(VERSION) libnf) || exit 0;
+		cp libnf/ChangeLog Changes
 
-$(NFDUMP).tar.gz:
-		@echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-		@echo "!!                                                     !!"
-		@echo "!!  If automatic download fails please get nfdump      !!"
-		@echo "!!  sources manually                                   !!"
-		@echo "!!                                                     !!"
-		@echo "!!  VERSION: $(NFDUMP)                            !!"
-		@echo "!!  URL:     http://sourceforge.net/projects/nfdump/   !!"
-		@echo "!!  FILE:    $(NFDUMP).tar.gz                     !!"
-		@echo "!!                                                     !!"
-		@echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-		wget -nv $(NFDUMP_URL) || curl -L -o $(NFDUMP_SRC) $(NFDUMP_URL)
+#libnf/configure: libnf/prepare-nfdump.sh
+#		(cd libnf && ./prepare-nfdump.sh && cd ..) 
 
+libnf/Makefile: libnf/configure 
+		(cd libnf && ./configure && cd ..) 
 
-nfdump: $(NFDUMP).tar.gz 
-		./md5sum.sh $(NFDUMP_MD5) $(NFDUMP).tar.gz 
-		tar xzf $(NFDUMP).tar.gz
-		$(MV) -f $(NFDUMP) nfdump 
-		# apply patches in beta code 
-		cd nfdump && patch -p1 < ../nfdump-bugs.patch && cd ..
-		# nfdump gzip contains object files, so we rid them off
-		$(RM_F) nfdump/bin/nfdump
-		$(RM_F) nfdump/bin/*.o
-		cd nfdump && export CFLAGS=-fPIC && ./configure --enable-nsel && cd bin && make nfdump
-		$(RM_F) nfdump/bin/*.o
+libnf/nfdump/bin/nfdump: 
+		@echo "building nfdump..."
+		$(RM_F) libnf/nfdump/bin/nfdump  
+		(cd libnf/nfdump && ./configure --enable-nsel && cd bin && make nfdump && cd ../../..) >/dev/null 2>&1 || exit 0
 
-$(MYEXTLIB): nfdump libnf/Makefile
-		cd libnf && $(MAKE) $(PASSTHRU)
-		#cd libnf && $(MAKE) 
+$(MYEXTLIB): libnf/Makefile libnf_perl/Makefile libnf/nfdump/bin/nfdump
+		cd libnf && $(MAKE)
+		cd libnf_perl && $(MAKE) $(PASSTHRU)
+
+dist-preop:
+		(cd libnf && make dist) 
+		cp libnf/libnf-*.tar.gz .
+		perl -pi -w -e \'s/(libnf-).*(.tar.gz)/libnf-\'$(VERSION)\'.tar.gz/g;\' MANIFEST
 ';
+
 }
 

@@ -35,7 +35,7 @@ our @EXPORT = qw(
 	
 );
 
-our $VERSION = '0.99_01';
+our $VERSION = '1.01';
 
 sub AUTOLOAD {
     # This AUTOLOAD is used to 'autoload' constants from the constant()
@@ -1048,6 +1048,8 @@ sub file_info {
 
 =head1 SUPPORTED ITEMS 
 
+Up to date list of supported items is available on L<Net::NfDump::Fields>
+
   Time items
   =====================
   first - Timestamp of the first packet seen (in miliseconds)
@@ -1312,4 +1314,3 @@ If you are satisfied with using C<Net::NfDump>, please, send us a postcard, pref
 1;
 
 __END__
-

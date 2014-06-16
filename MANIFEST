@@ -1,20 +1,16 @@
+libnf-1.01.tar.gz
 Changes
 Makefile.PL
 MANIFEST
 NfDump.xs
 ppport.h
 README
-md5sum.sh
 perl_math_int64.c
 perl_math_int64.h
-libnf/libnf.c  
-libnf/libnf.h  
-libnf/bit_array.h
-libnf/Makefile.PL
-libnf/h2pod.pl
-libnf/h2fields.pl
-libnf/mergechapter.pl
-libnf/check_items_map.pl
+libnf_perl/libnf_perl.c  
+libnf_perl/libnf_perl.h  
+libnf_perl/info2fields.pl
+libnf_perl/Makefile.PL
 lib/Net/NfDump.pm
 lib/Net/NfDump/Fields.pm
 t/ds.pl 
@@ -34,6 +30,4 @@ t/data2
 examples/example1.pl
 examples/download_asn_db
 examples/nf_asn_geo_update
-nfdump-1.6.12.tar.gz
-nfdump-bugs.patch 
 META.yml                                 Module meta-data (added by MakeMaker)

@@ -1,5 +1,12 @@
 
-use Test::More tests => 1;
+use Test::More;
+
+if (defined($ENV{'AUTOMATED_TESTING'}) && $ENV{'AUTOMATED_TESTING'} eq 1) {
+	plan skip_all => 'Not performed as automated test';
+} else {
+	plan tests => 1;
+}
+
 use Net::NfDump qw ':all';
 use Data::Dumper;
 #open(STDOUT, ">&STDERR");
@@ -29,7 +36,7 @@ while (my ($opts, $name) = each %ctests) {
 
 	$tm1 = time();
 	system("libnf/examples/lnf_ex02_reader $opts");
-	my $tm2 = time() - $tm1;
+	my $tm2 = time() - $tm1 + 1;
 
 	diag sprintf("  %s (%s): %d recs in %d secs (%d/sec)", $name, $opts, $recs, $tm2, $recs/$tm2);
 }

@@ -13,7 +13,7 @@ use Net::NfDump::Fields;
 
 our @ISA = qw(Exporter);
 
-our $VERSION = '1.03';
+our $VERSION = '1.04';
 
 # XXX
 # Items to export into callers namespace by default. Note: do not export
@@ -225,7 +225,7 @@ sub merge_opts {
 	}
 
 	while ( my ($key, $val) =  each %opts ) {
-		if ($key eq "InputFiles" || $key eq "Fields") {
+		if ($key eq "InputFiles" || $key eq "Fields" ) {
 			$val = split_str($val);
 		}
 		$ropts->{$key} = $val;
@@ -295,6 +295,16 @@ List of fields to read or to update. Any supported field can be used
 here. See the chapter "Supported Fields" for the full list.
 Special field * can be used to define all fields. 
 
+=item * B<Aggreg> => 0
+
+Create aggregated result. When the method ->query() is callet 
+the library loads data into memory structure and 
+perform aggregation according the Fields attribute. 
+
+=item * B<OrderBy> => '<none>'
+
+Sort the final result according the field specified. It can by 
+used only for aggregated results. 
 
 =item * B<TimeWindowStart>, B<TimeWindowEnd> => 0
 
@@ -495,7 +505,41 @@ sub query {
 		croak("No imput files defined");
 	} 
 
-	$self->set_fields($o->{Fields});
+	my @resfields = ();
+	foreach my $fld (@{$o->{Fields}}) {
+		my $numbits = 32;
+		my $numbits6 = 128;
+
+		if ($fld =~ /\//) {
+			($fld, $numbits, $numbits6) = split(/\//, $fld);
+			$numbits6 = $numbits if (!defined($numbits6));
+		}
+		push(@resfields, $fld);
+
+
+		if (defined($o->{Aggreg}) && $o->{Aggreg}) {
+			if ($fld eq '*') {
+				croak("Symbol '*' is not allower for aggregated items");
+			}
+		
+			if (!defined($Net::NfDump::Fields::NFL_FIELDS_TXT{$fld})) {
+				croak("Unknown field $fld");
+			}
+
+			my $id = $Net::NfDump::Fields::NFL_FIELDS_TXT{$fld};
+			my $flags = $Net::NfDump::Fields::NFL_FIELDS_DEFAULT_AGGR{$id};
+
+			if (defined($o->{OrderBy}) && $fld eq $o->{OrderBy}) {
+				$flags |= $Net::NfDump::Fields::NFL_FIELDS_DEFAULT_SORT{$id};
+			}
+
+			Net::NfDump::libnf_aggr_add($self->{handle}, $id, $flags, 
+				$numbits, $numbits6);
+		}
+
+	}
+
+	$self->set_fields([ @resfields ]);
 
 	# handle, filter, windows start, windows end, ref to filelist 
 	Net::NfDump::libnf_read_files($self->{handle}, $o->{Filter}, 

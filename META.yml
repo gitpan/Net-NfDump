@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Net-NfDump
-version:            1.05
+version:            1.06
 abstract:           Perl API for manipulating with nfdump files
 author:
     - Tomas Podermanski <tpoder@cis.vutbr.cz>
